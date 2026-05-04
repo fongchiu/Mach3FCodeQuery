@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mach3 F码查询器</title>
+    <link rel="manifest" href="manifest.json">
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family: 'Segoe UI', Roboto, sans-serif; background: linear-gradient(135deg, #1e2b3c, #0f1a26); min-height:100vh; display:flex; align-items:center; justify-content:center; padding:1rem; }
+        .container { background: rgba(255,255,255,0.08); backdrop-filter:blur(20px); border:1px solid rgba(255,255,255,0.15); border-radius:2.5rem; padding:2rem; max-width:850px; width:100%; color:#e0e8f0; }
+        h1 { font-size:2rem; font-weight:600; border-bottom:2px solid rgba(255,255,255,0.2); padding-bottom:1rem; margin-bottom:1.5rem; display:flex; align-items:center; gap:0.5rem; }
+        h1 span { background:#3a6ea5; padding:0.2rem 0.8rem; border-radius:2rem; font-size:1rem; }
+        .search-panel { background:rgba(20,30,44,0.7); border-radius:1.5rem; padding:1.5rem; margin-bottom:1.5rem; display:flex; flex-wrap:wrap; gap:1rem; align-items:flex-end; }
+        .input-group { display:flex; flex-direction:column; gap:0.4rem; flex:1 1 180px; }
+        .input-group label { font-size:0.8rem; color:#a0b9d4; }
+        input, select { background:rgba(10,18,28,0.8); border:1px solid rgba(255,255,255,0.25); border-radius:1rem; padding:0.8rem 1rem; font-size:1rem; color:#f0f4fc; outline:none; }
+        button { background:#2c5f8a; border:none; border-radius:1rem; padding:0.8rem 2rem; color:white; font-weight:600; cursor:pointer; }
+        .result-box { background:rgba(15,25,35,0.7); border-radius:1.5rem; padding:1.5rem; min-height:100px; }
+        .result-item { background:rgba(255,255,255,0.06); margin-bottom:0.7rem; padding:0.6rem 1rem; border-radius:1rem; border-left:4px solid #4a8bc2; display:flex; flex-wrap:wrap; gap:0.5rem 1rem; align-items:baseline; }
+        .func-en { font-weight:700; color:#d9e6f2; }
+        .func-zh { background:#2e4559; padding:0.2rem 0.8rem; border-radius:1rem; color:#f2e9c2; }
+        .code-badge { background:#3f5b70; padding:0.2rem 0.6rem; border-radius:1rem; font-size:0.9rem; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>
+  <PNG src="icon.png" width="36" height="36" style="vertical-align:middle; margin-right:8px;" alt="图标">
+  Mach3 OEM 代码查询 <span>FCode</span>
+</h1>
+    <div class="search-panel">
+        <div class="input-group">
+            <label>🔢 输入代码</label>
+            <input type="number" id="codeInput" placeholder="例: 1, 100, 800">
+        </div>
+        <div class="input-group">
+            <label>📋 选择属性</label>
+            <select id="attrSelect">
+                <option value="OEMCode">OEMCode</option>
+                <option value="OEM LEDs">OEM LEDs</option>
+                <option value="OEM Standard DROs">OEM Standard DROs</option>
+                <option value="Standard LEDs">Standard LEDs</option>
+                <option value="Standard Buttons">Standard Buttons</option>
+            </select>
+        </div>
+        <button onclick="search()">🔍 查询</button>
+    </div>
+    <div class="result-box" id="resultContainer">
+        <span style="color:#aaa;">👆 输入代码并选择属性</span>
+    </div>
+</div>
+<script>
+// ================== 全部数据（数组格式，安全可靠） ==================
+const DATA = [
+    // === OEMCode 部分 ===
+    {name:"Jog Inc Inc DRO", code:1, attr:"OEMCode", zh:"点动增量 DRO"},
+    {name:"Pulse Freq DRO", code:2, attr:"OEMCode", zh:"脉冲频率 DRO"},
+    {name:"Slow Jog % DRO", code:3, attr:"OEMCode", zh:"慢速点动百分比 DRO"},
+    {name:"X min DRO", code:4, attr:"OEMCode", zh:"X 轴最小值 DRO"},
+    {name:"Y min DRO", code:5, attr:"OEMCode", zh:"Y 轴最小值 DRO"},
+    {name:"Z min DRO", code:6, attr:"OEMCode", zh:"Z 轴最小值 DRO"},
+    {name:"A min DRO", code:7, attr:"OEMCode", zh:"A 轴最小值 DRO"},
+    {name:"B min DRO", code:8, attr:"OEMCode", zh:"B 轴最小值 DRO"},
+    {name:"C min DRO", code:9, attr:"OEMCode", zh:"C 轴最小值 DRO"},
+    {name:"X max DRO", code:10, attr:"OEMCode", zh:"X 轴最大值 DRO"},
+    {name:"Y max DRO", code:11, attr:"OEMCode", zh:"Y 轴最大值 DRO"},
+    {name:"Z max DRO", code:12, attr:"OEMCode", zh:"Z 轴最大值 DRO"},
+    {name:"A max DRO", code:13, attr:"OEMCode", zh:"A 轴最大值 DRO"},
+    {name:"B max DRO", code:14, attr:"OEMCode", zh:"B 轴最大值 DRO"},
+    {name:"C max DRO", code:15, attr:"OEMCode", zh:"C 轴最大值 DRO"},
+    {name:"X G92 Axis Off DRO", code:16, attr:"OEMCode", zh:"X 轴 G92 偏移 DRO"},
+    {name:"Y G92 Axis Off DRO", code:17, attr:"OEMCode", zh:"Y 轴 G92 偏移 DRO"},
+    {name:"Z G92 Axis Off DRO", code:18, attr:"OEMCode", zh:"Z 轴 G92 偏移 DRO"},
+    {name:"A G92 Axis Off DRO", code:19, attr:"OEMCode", zh:"A 轴 G92 偏移 DRO"},
+    {name:"B G92 Axis Off DRO", code:20, attr:"OEMCode", zh:"B 轴 G92 偏移 DRO"},
+    {name:"C G92 Axis Off DRO", code:21, attr:"OEMCode", zh:"C 轴 G92 偏移 DRO"},
+    {name:"Queue Depth DRO", code:22, attr:"OEMCode", zh:"队列深度 DRO"},
+    {name:"Time Scale DRO", code:23, attr:"OEMCode", zh:"时间比例 DRO"},
+    {name:"PWM Base DRO", code:24, attr:"OEMCode", zh:"PWM 基础值 DRO"},
+    {name:"Torch Correction Speed DRO", code:25, attr:"OEMCode", zh:"调高器校正速度 DRO"},
+    {name:"Torch Height Corrorrection DRO", code:26, attr:"OEMCode", zh:"调高器高度校正 DRO"},
+    {name:"Torch Height Max DRO", code:27, attr:"OEMCode", zh:"调高器最大高度 DRO"},
+    {name:"CPU Load DRO", code:28, attr:"OEMCode", zh:"CPU 负载 DRO"},
+    {name:"Encoder 1 (X) position DRO", code:29, attr:"OEMCode", zh:"编码器1 X 位置 DRO"},
+    {name:"Encoder 2 (Y) position DRO", code:30, attr:"OEMCode", zh:"编码器2 Y 位置 DRO"},
+    {name:"Encoder 3 (Z) position DRO", code:31, attr:"OEMCode", zh:"编码器3 Z 位置 DRO"},
+    {name:"Tool length offset", code:32, attr:"OEMCode", zh:"刀具长度偏移"},
+    {name:"X axis Ref Sw DRO", code:33, attr:"OEMCode", zh:"X 轴参考开关 DRO"},
+    {name:"Y axis Ref Sw DRO", code:34, attr:"OEMCode", zh:"Y 轴参考开关 DRO"},
+    {name:"Z axis Ref Sw DRO", code:35, attr:"OEMCode", zh:"Z 轴参考开关 DRO"},
+    {name:"A axis Ref Sw DRO", code:36, attr:"OEMCode", zh:"A 轴参考开关 DRO"},
+    {name:"B axis Ref Sw DRO", code:37, attr:"OEMCode", zh:"B 轴参考开关 DRO"},
+    {name:"C axis Ref Sw DRO", code:38, attr:"OEMCode", zh:"C 轴参考开关 DRO"},
+    {name:"True spindle DRO", code:39, attr:"OEMCode", zh:"真实主轴速度 DRO"},
+    {name:"Worst Case DRO", code:40, attr:"OEMCode", zh:"最坏情况 DRO"},
+    {name:"Tool X Offset DRO", code:41, attr:"OEMCode", zh:"刀具 X 偏移 DRO"},
+    {name:"Tool Z Offset DRO", code:42, attr:"OEMCode", zh:"刀具 Z 偏移 DRO"},
+    {name:"Tool Dia DRO", code:43, attr:"OEMCode", zh:"刀具直径 DRO"},
+    {name:"Tool Tip Rad DRO", code:44, attr:"OEMCode", zh:"刀尖半径 DRO"},
+    {name:"Touch Correction DRO", code:45, attr:"OEMCode", zh:"对刀校正 DRO"},
+    {name:"Current Fixture Number DRO", code:46, attr:"OEMCode", zh:"当前夹具编号 DRO"},
+    {name:"Part X Offset DRO", code:47, attr:"OEMCode", zh:"工件 X 偏移 DRO"},
+    {name:"Part Y Offset DRO", code:48, attr:"OEMCode", zh:"工件 Y 偏移 DRO"},
+    {name:"Part Z Offset DRO", code:49, attr:"OEMCode", zh:"工件 Z 偏移 DRO"},
+    {name:"Part A Offset DRO", code:50, attr:"OEMCode", zh:"工件 A 偏移 DRO"},
+    {name:"Part B Offset DRO", code:51, attr:"OEMCode", zh:"工件 B 偏移 DRO"},
+    {name:"Part C Offset DRO", code:52, attr:"OEMCode", zh:"工件 C 偏移 DRO"},
+    {name:"CPU Speed DRO", code:53, attr:"OEMCode", zh:"CPU 速度 DRO"},
+    {name:"Safe Z DRO", code:54, attr:"OEMCode", zh:"安全高度 DRO"},
+    {name:"Overidden Feed Rate DRO", code:55, attr:"OEMCode", zh:"被覆盖的进给速率 DRO"},
+    {name:"Pulley DRO", code:56, attr:"OEMCode", zh:"皮带轮 DRO"},
+    {name:"Max Spindle Speed on current pulley DRO", code:57, attr:"OEMCode", zh:"当前皮带轮最大转速 DRO"},
+    {name:"Velocity per Rev DRO", code:58, attr:"OEMCode", zh:"每转速度 DRO"},
+    {name:"X Scale DRO", code:59, attr:"OEMCode", zh:"X 轴缩放 DRO"},
+    {name:"Y Scale DRO", code:60, attr:"OEMCode", zh:"Y 轴缩放 DRO"},
+    {name:"Z Scale DRO", code:61, attr:"OEMCode", zh:"Z 轴缩放 DRO"},
+    {name:"A Scale DRO", code:62, attr:"OEMCode", zh:"A 轴缩放 DRO"},
+    {name:"B Scale DRO", code:63, attr:"OEMCode", zh:"B 轴缩放 DRO"},
+    {name:"C Scale DRO", code:64, attr:"OEMCode", zh:"C 轴缩放 DRO"},
+    {name:"Lowest Torch Correction DRO", code:65, attr:"OEMCode", zh:"最低调高器校正 DRO"},
+    {name:"Threading Entrance Angle DRO", code:66, attr:"OEMCode", zh:"螺纹切入角 DRO"},
+    {name:"Max Entrance Points DRO", code:67, attr:"OEMCode", zh:"最大切入点数量 DRO"},
+    {name:"Rotational Time Error DRO", code:68, attr:"OEMCode", zh:"旋转时间误差 DRO"},
+    {name:"Entrance Trigger DRO", code:69, attr:"OEMCode", zh:"切入触发 DRO"},
+    {name:"Time Correction Derivative DRO", code:70, attr:"OEMCode", zh:"时间校正微分 DRO"},
+    {name:"Interrupts per spindle rev DRO", code:71, attr:"OEMCode", zh:"每转中断次数 DRO"},
+    {name:"Current Spin Counts DRO", code:72, attr:"OEMCode", zh:"当前旋转计数 DRO"},
+    {name:"Spin Adder DRO", code:73, attr:"OEMCode", zh:"旋转加法器 DRO"},
+    {name:"Spin up/down increment DRO.", code:74, attr:"OEMCode", zh:"旋转加减速增量 DRO"},
+    {name:"Stock Size DRO", code:75, attr:"OEMCode", zh:"毛坯尺寸 DRO"},
+    {name:"Laser X Grid DRO", code:76, attr:"OEMCode", zh:"激光 X 网格 DRO"},
+    {name:"Laser Y Grid DRO", code:77, attr:"OEMCode", zh:"激光 Y 网格 DRO"},
+    {name:"Repetitions DRO", code:78, attr:"OEMCode", zh:"重复次数 DRO"},
+    {name:"Lower Z-Inhibit By DRO", code:79, attr:"OEMCode", zh:"Z 轴抑制降低量 DRO"},
+    {name:"Z-Inhibit DRO", code:80, attr:"OEMCode", zh:"Z 轴抑制 DRO"},
+    {name:"Port Bit-test DRO (diagnostic)", code:81, attr:"OEMCode", zh:"端口位测试 DRO"},
+    {name:"Anti-dive limit DRO", code:82, attr:"OEMCode", zh:"防碰撞限制 DRO"},
+    {name:"X Machine Coord DRO", code:83, attr:"OEMCode", zh:"X 机械坐标 DRO"},
+    {name:"Y Machine Coord DRO", code:84, attr:"OEMCode", zh:"Y 机械坐标 DRO"},
+    {name:"Z Machine Coord DRO", code:85, attr:"OEMCode", zh:"Z 机械坐标 DRO"},
+    {name:"A Machine Coord DRO", code:86, attr:"OEMCode", zh:"A 机械坐标 DRO"},
+    {name:"B Machine Coord DRO", code:87, attr:"OEMCode", zh:"B 机械坐标 DRO"},
+    {name:"C Machine Coord DRO", code:88, attr:"OEMCode", zh:"C 机械坐标 DRO"},
+    {name:"Blend factor DRO", code:89, attr:"OEMCode", zh:"混合因子 DRO"},
+    {name:"Number of spindle disc slots DRO", code:90, attr:"OEMCode", zh:"主轴盘槽数 DRO"},
+    {name:"G73 Pull-off value DRO", code:91, attr:"OEMCode", zh:"G73 退刀值 DRO"},
+    {name:"Tangential lift threshold angle DRO", code:92, attr:"OEMCode", zh:"切向提升阈值角度 DRO"},
+    {name:"Tangential lift Z level DRO", code:93, attr:"OEMCode", zh:"切向提升 Z 高度 DRO"},
+    {name:"CV Feedrate DRO", code:97, attr:"OEMCode", zh:"恒速进给速率 DRO"},
+    {name:"Feed override increment value DRO", code:98, attr:"OEMCode", zh:"进给倍率增量值 DRO"},
+    {name:"Encoder 4 position DRO", code:100, attr:"OEMCode", zh:"编码器4 位置 DRO"},
+    {name:"MPG 1 count DRO", code:101, attr:"OEMCode", zh:"MPG1 计数 DRO"},
+    {name:"MPG 2 count DRO", code:102, attr:"OEMCode", zh:"MPG2 计数 DRO"},
+    {name:"MPG 3 count DRO", code:103, attr:"OEMCode", zh:"MPG3 计数 DRO"},
+    {name:"Rapid feedrate DRO", code:104, attr:"OEMCode", zh:"快速进给速率 DRO"},
+    {name:"Diameter of current tool DRO", code:105, attr:"OEMCode", zh:"当前刀具直径 DRO"},
+    {name:"Tip direction of current tool DRO", code:106, attr:"OEMCode", zh:"当前刀尖方向 DRO"},
+    {name:"Tool nose radius of current tool DRO", code:107, attr:"OEMCode", zh:"当前刀尖半径 DRO"},
+    {name:"X offset of current tool DRO", code:108, attr:"OEMCode", zh:"当前刀具 X 偏移 DRO"},
+    {name:"Z offset of current tool DRO", code:109, attr:"OEMCode", zh:"当前刀具 Z 偏移 DRO"},
+    {name:"X wear offset of current tool DRO", code:110, attr:"OEMCode", zh:"当前刀具 X 磨损 DRO"},
+    {name:"Z wear offset of current tool DRO", code:111, attr:"OEMCode", zh:"当前刀具 Z 磨损 DRO"},
+    {name:"Tool turret angle of current tool DRO", code:112, attr:"OEMCode", zh:"当前刀塔角度 DRO"},
+    {name:"Velocity of MPG 1 DRO", code:113, attr:"OEMCode", zh:"MPG1 速度 DRO"},
+    {name:"Velocity of MPG 2 DRO", code:114, attr:"OEMCode", zh:"MPG2 速度 DRO"},
+    {name:"Velocity of MPG 3 DRO", code:115, attr:"OEMCode", zh:"MPG3 速度 DRO"},
+    {name:"Angle of taper to be cut with MPG tapering DRO", code:116, attr:"OEMCode", zh:"MPG 锥度角度 DRO"},
+    {name:"Spindle speed as surface speed DRO", code:117, attr:"OEMCode", zh:"主轴表面速度 DRO"},
+    {name:"Angle of rotation of X/Y coordinate system (cf G68)", code:118, attr:"OEMCode", zh:"X/Y 坐标系旋转角度 DRO"},
+    {name:"Laser grid spacing DRO", code:119, attr:"OEMCode", zh:"激光网格间距 DRO"},
+    {name:"Number of incremental jogs that can be buffered DRO", code:120, attr:"OEMCode", zh:"可缓存点动次数 DRO"},
+    {name:"Minimum spindle speed on current pulley DRO", code:121, attr:"OEMCode", zh:"当前皮带轮最小转速 DRO"},
+    {name:"Feed rate ignoring that set in F word DRO", code:122, attr:"OEMCode", zh:"忽略 F 指令的进给速率 DRO"},
+    {name:"Tool post offset (between front and rear posts DRO", code:123, attr:"OEMCode", zh:"刀架偏移 DRO"},
+    {name:"Current velocity of MPG 1 DRO", code:124, attr:"OEMCode", zh:"MPG1 当前速度 DRO"},
+    {name:"Current velocity of MPG 2 DRO", code:125, attr:"OEMCode", zh:"MPG2 当前速度 DRO"},
+    {name:"Feedrate for use with MPG step jogs DRO", code:126, attr:"OEMCode", zh:"MPG 步进点动进给率 DRO"},
+    {name:"Error between Encoder 1 and abs X position DRO", code:127, attr:"OEMCode", zh:"编码器1 与绝对 X 位置误差 DRO"},
+    {name:"Error between Encoder 2 and abs Y position DRO", code:128, attr:"OEMCode", zh:"编码器2 与绝对 Y 位置误差 DRO"},
+    {name:"Error between Encoder 3 and abs Z position DRO", code:129, attr:"OEMCode", zh:"编码器3 与绝对 Z 位置误差 DRO"},
+    {name:"Time (uSec) in interrupt handler DRO", code:130, attr:"OEMCode", zh:"中断处理时间 DRO"},
+    {name:"SLS Dist - laser position measurement DRO", code:131, attr:"OEMCode", zh:"激光位置测量距离 DRO"},
+    {name:"Axis 6 Tripcount - system debug use only DRO", code:132, attr:"OEMCode", zh:"轴6 跳闸计数 DRO"},
+    {name:"Count of actual pulses output on X - debug use only DRO", code:134, attr:"OEMCode", zh:"X 轴实际脉冲计数 DRO"},
+    {name:"Count of actual pulses output on Y - debug use only DRO", code:135, attr:"OEMCode", zh:"Y 轴实际脉冲计数 DRO"},
+    {name:"Count of actual pulses output on Z - debug use only DRO", code:136, attr:"OEMCode", zh:"Z 轴实际脉冲计数 DRO"},
+    {name:"Count of actual pulses output on A - debug use only DRO", code:137, attr:"OEMCode", zh:"A 轴实际脉冲计数 DRO"},
+    {name:"Count of actual pulses output on B - debug use only DRO", code:138, attr:"OEMCode", zh:"B 轴实际脉冲计数 DRO"},
+    {name:"Count of actual pulses output on C - debug use only DRO", code:139, attr:"OEMCode", zh:"C 轴实际脉冲计数 DRO"},
+    {name:"Actual count from encoder 1 - debug use only DRO", code:140, attr:"OEMCode", zh:"编码器1 实际计数 DRO"},
+    {name:"Actual count from encoder 2 - debug use only DRO", code:141, attr:"OEMCode", zh:"编码器2 实际计数 DRO"},
+    {name:"Actual count from encoder 3 - debug use only DRO", code:142, attr:"OEMCode", zh:"编码器3 实际计数 DRO"},
+    {name:"Actual count from encoder 4 - debug use only DRO", code:143, attr:"OEMCode", zh:"编码器4 实际计数 DRO"},
+    {name:"Actual count from encoder 5 - debug use only DRO", code:144, attr:"OEMCode", zh:"编码器5 实际计数 DRO"},
+    {name:"Actual count from encoder 6 - debug use only DRO", code:145, attr:"OEMCode", zh:"编码器6 实际计数 DRO"},
+    {name:"ModBus input 64 DRO", code:146, attr:"OEMCode", zh:"ModBus 输入 64 DRO"},
+    {name:"ModBus input 65 DRO", code:147, attr:"OEMCode", zh:"ModBus 输入 65 DRO"},
+    {name:"ModBus input 66 DRO", code:148, attr:"OEMCode", zh:"ModBus 输入 66 DRO"},
+    {name:"ModBus input 67 DRO", code:149, attr:"OEMCode", zh:"ModBus 输入 67 DRO"},
+    {name:"Softlimit X Maximum DRO", code:150, attr:"OEMCode", zh:"X 软限位最大值 DRO"},
+    {name:"Softlimit Y Maximum DRO", code:151, attr:"OEMCode", zh:"Y 软限位最大值 DRO"},
+    {name:"Softlimit Z Maximum DRO", code:152, attr:"OEMCode", zh:"Z 软限位最大值 DRO"},
+    {name:"Softlimit A Maximum DRO", code:153, attr:"OEMCode", zh:"A 软限位最大值 DRO"},
+    {name:"Softlimit B Maximum DRO", code:154, attr:"OEMCode", zh:"B 软限位最大值 DRO"},
+    {name:"Softlimit C Maximum DRO", code:155, attr:"OEMCode", zh:"C 软限位最大值 DRO"},
+    {name:"Softlimit X Minimum DRO", code:156, attr:"OEMCode", zh:"X 软限位最小值 DRO"},
+    {name:"Softlimit Y Minimum DRO", code:157, attr:"OEMCode", zh:"Y 软限位最小值 DRO"},
+    {name:"Softlimit Z Minimum DRO", code:158, attr:"OEMCode", zh:"Z 软限位最小值 DRO"},
+    {name:"Softlimit A Minimum DRO", code:159, attr:"OEMCode", zh:"A 软限位最小值 DRO"},
+    {name:"Softlimit B Minimum DRO", code:160, attr:"OEMCode", zh:"B 软限位最小值 DRO"},
+    {name:"Softlimit C Minimum DRO", code:161, attr:"OEMCode", zh:"C 软限位最小值 DRO"},
+    {name:"Distance from front to rear toolpost DRO", code:162, attr:"OEMCode", zh:"前后刀架距离 DRO"},
+    {name:"Part X radius/diameter for Touching to tooltable DRO", code:175, attr:"OEMCode", zh:"对刀 X 半径/直径 DRO"},
+    {name:"Part Z location for Touching to tooltable DRO", code:176, attr:"OEMCode", zh:"对刀 Z 位置 DRO"},
+    {name:"Machine X coord - X Work Offset DRO", code:178, attr:"OEMCode", zh:"机械 X - 工件偏移 DRO"},
+    {name:"Machine Y coord - Y Work Offset DRO", code:179, attr:"OEMCode", zh:"机械 Y - 工件偏移 DRO"},
+    {name:"Machine Z coord - Z Work Offset - Tool length DRO", code:180, attr:"OEMCode", zh:"机械 Z - 工件偏移 - 刀长 DRO"},
+    {name:"X axis home location used by G28 DRO", code:190, attr:"OEMCode", zh:"G28 X 原点 DRO"},
+    {name:"Y axis home location used by G28 DRO", code:191, attr:"OEMCode", zh:"G28 Y 原点 DRO"},
+    {name:"Z axis home location used by G28 DRO", code:192, attr:"OEMCode", zh:"G28 Z 原点 DRO"},
+    {name:"X DRO", code:800, attr:"OEMCode", zh:"X 轴位置 DRO"},
+    {name:"Y DRO", code:801, attr:"OEMCode", zh:"Y 轴位置 DRO"},
+    {name:"Z DRO", code:802, attr:"OEMCode", zh:"Z 轴位置 DRO"},
+    {name:"A DRO", code:803, attr:"OEMCode", zh:"A 轴位置 DRO"},
+    {name:"B DRO", code:804, attr:"OEMCode", zh:"B 轴位置 DRO"},
+    {name:"C DRO", code:805, attr:"OEMCode", zh:"C 轴位置 DRO"},
+    {name:"Curr Line no DRO", code:816, attr:"OEMCode", zh:"当前行号 DRO"},
+    {name:"Spindle requested DRO", code:817, attr:"OEMCode", zh:"请求主轴转速 DRO"},
+    {name:"Feedrate DRO", code:818, attr:"OEMCode", zh:"进给速率 DRO"},
+    {name:"Feedrate Override (FRO)", code:821, attr:"OEMCode", zh:"进给倍率 FRO"},
+    {name:"Tool number DRO", code:824, attr:"OEMCode", zh:"刀具号 DRO"},
+    {name:"Cycle start", code:1000, attr:"OEMCode", zh:"循环启动"},
+    {name:"Pause", code:1001, attr:"OEMCode", zh:"暂停"},
+    {name:"Rewind", code:1002, attr:"OEMCode", zh:"回退"},
+    {name:"Stop", code:1003, attr:"OEMCode", zh:"停止"},
+    {name:"Single", code:1004, attr:"OEMCode", zh:"单段"},
+    {name:"Resume", code:1005, attr:"OEMCode", zh:"继续"},
+    {name:"Edit File", code:1006, attr:"OEMCode", zh:"编辑文件"},
+    {name:"Zero All", code:1007, attr:"OEMCode", zh:"全部归零"},
+    {name:"Zero X", code:1008, attr:"OEMCode", zh:"X 归零"},
+    {name:"Zero Y", code:1009, attr:"OEMCode", zh:"Y 归零"},
+    {name:"Zero Z", code:1010, attr:"OEMCode", zh:"Z 归零"},
+    {name:"Ref X", code:1022, attr:"OEMCode", zh:"参考 X"},
+    {name:"Ref Y", code:1023, attr:"OEMCode", zh:"参考 Y"},
+    {name:"Ref Z", code:1024, attr:"OEMCode", zh:"参考 Z"},
+    // === OEM LEDs 部分 ===
+    {name:"G92 LED", code:10, attr:"OEM LEDs", zh:"G92 LED"},
+    {name:"Spindle CW LED", code:11, attr:"OEM LEDs", zh:"主轴正转 LED"},
+    {name:"Mist LED", code:12, attr:"OEM LEDs", zh:"油雾 LED"},
+    {name:"Flood LED", code:13, attr:"OEM LEDs", zh:"冷却液 LED"},
+    {name:"Jog mode Cont LED", code:14, attr:"OEM LEDs", zh:"连续点动 LED"},
+    {name:"Jog mode Incr LED", code:15, attr:"OEM LEDs", zh:"增量点动 LED"},
+    {name:"Mach coords warn LED", code:16, attr:"OEM LEDs", zh:"机械坐标警告 LED"},
+    {name:"Feed override LED", code:17, attr:"OEM LEDs", zh:"进给倍率 LED"},
+    {name:"Estimating LED", code:18, attr:"OEM LEDs", zh:"预估 LED"},
+    {name:"Emergency LED", code:19, attr:"OEM LEDs", zh:"急停 LED"},
+    {name:"Reset LED", code:800, attr:"OEM LEDs", zh:"重置 LED"},
+    {name:"Inch LED", code:801, attr:"OEM LEDs", zh:"英寸 LED"},
+    {name:"MMs LED", code:802, attr:"OEM LEDs", zh:"毫米 LED"},
+    {name:"Idle LED", code:803, attr:"OEM LEDs", zh:"空闲 LED"},
+    {name:"Start LED", code:804, attr:"OEM LEDs", zh:"启动 LED"},
+    // === OEM Standard DROs 部分 ===
+    {name:"X DRO", code:0, attr:"OEM Standard DROs", zh:"X 轴 DRO"},
+    {name:"Y DRO", code:1, attr:"OEM Standard DROs", zh:"Y 轴 DRO"},
+    {name:"Z DRO", code:2, attr:"OEM Standard DROs", zh:"Z 轴 DRO"},
+    {name:"A DRO", code:3, attr:"OEM Standard DROs", zh:"A 轴 DRO"},
+    {name:"X Vel DRO", code:6, attr:"OEM Standard DROs", zh:"X 轴速度 DRO"},
+    // === Standard LEDs 部分 ===
+    {name:"Reset LED", code:0, attr:"Standard LEDs", zh:"重置 LED"},
+    {name:"Inch LED", code:1, attr:"Standard LEDs", zh:"英寸 LED"},
+    {name:"MMs LED", code:2, attr:"Standard LEDs", zh:"毫米 LED"},
+    {name:"Idle LED", code:3, attr:"Standard LEDs", zh:"空闲 LED"},
+    // === Standard Buttons 部分 ===
+    {name:"Cycle start", code:0, attr:"Standard Buttons", zh:"循环启动"},
+    {name:"Pause", code:1, attr:"Standard Buttons", zh:"暂停"},
+    {name:"Rewind", code:2, attr:"Standard Buttons", zh:"回退"},
+    {name:"Stop", code:3, attr:"Standard Buttons", zh:"停止"},
+    {name:"Single", code:4, attr:"Standard Buttons", zh:"单段"},
+    {name:"Resume", code:5, attr:"Standard Buttons", zh:"继续"},
+    {name:"Edit File", code:6, attr:"Standard Buttons", zh:"编辑文件"},
+    {name:"Zero All", code:7, attr:"Standard Buttons", zh:"全部归零"},
+    {name:"Zero X", code:8, attr:"Standard Buttons", zh:"X 归零"},
+];
+
+// 索引构建
+const index = {};
+DATA.forEach(item => {
+    const key = item.attr + '|' + item.code;
+    if (!index[key]) index[key] = [];
+    index[key].push(item);
+});
+
+function search() {
+    const code = parseInt(document.getElementById('codeInput').value.trim());
+    const attr = document.getElementById('attrSelect').value;
+    const box = document.getElementById('resultContainer');
+    if (isNaN(code)) { box.innerHTML = '<span style="color:#ff9999;">请输入有效的数字代码</span>'; return; }
+    const key = attr + '|' + code;
+    const results = index[key] || [];
+    if (results.length === 0) {
+        box.innerHTML = '<span style="color:#aaa;">未找到匹配项</span>';
+        return;
+    }
+    box.innerHTML = results.map(r => `
+        <div class="result-item">
+            <span class="code-badge">${r.code}</span>
+            <span class="func-en">${r.name}</span>
+            <span class="func-zh">${r.zh}</span>
+        </div>
+    `).join('');
+}
+</script>
+</body>
+</html>
