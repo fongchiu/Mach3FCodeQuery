@@ -3,15 +3,46 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mach3 OEM 代码查询工具 · 状态栏版</title>
+    <title>Mach3 OEM 代码查询工具 · 全控件自定义版</title>
     <link rel="manifest" href="manifest.json">
     <style>
-        :root { --scale: 1; --bg: #1e2b3c; --card: rgba(255,255,255,0.08); --text: #e0e8f0; --accent: #3a6ea5; }
+        :root {
+            --scale: 1;
+            --bg: #1e2b3c;
+            --bg2: #0f1a26;
+            --card: rgba(255, 255, 255, 0.08);
+            --text: #e0e8f0;
+            --accent: #3a6ea5;
+            --card-radius: 2rem;
+            --btn-radius: 1rem;
+            --input-radius: 1rem;
+            --card-padding: 2rem;
+            --gap: 1rem;
+            --title-size: 1.6rem;
+            --btn-height: 2.8rem;
+            --btn-font-size: 1rem;
+            --input-height: 3rem;
+            --input-font-size: 1rem;
+            --label-font-size: 0.8rem;
+            --status-font-size: 0.85rem;
+            --result-font-size: 1rem;
+            --tab-font-size: 1rem;
+            --tab-padding: 0.6rem 1.8rem;
+            --ui-width: 960px;
+            --ui-height: auto;
+            --title-icon: url('icon.png');
+            --tab-icon-exact: '🔢';
+            --tab-icon-fuzzy: '🔍';
+            --status-icon-data: '📦';
+            --status-icon-cat: '📊';
+            --btn-icon-query: '';
+            --btn-icon-search: '';
+        }
         html { font-size: calc(16px * var(--scale)); }
-        * { margin:0; padding:0; box-sizing:border-box; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #1e2b3c, #0f1a26);
+            background: linear-gradient(135deg, var(--bg), var(--bg2));
             min-height: 100vh;
             display: flex;
             align-items: center;
@@ -21,11 +52,13 @@
         .app {
             background: var(--card);
             backdrop-filter: blur(20px);
-            border: 1px solid rgba(255,255,255,0.15);
-            border-radius: 2rem;
-            padding: 2rem;
-            max-width: 960px;
-            width: 100%;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: var(--card-radius);
+            padding: var(--card-padding);
+            width: var(--ui-width);
+            max-width: none;
+            height: var(--ui-height);
+            overflow-y: auto;
             color: var(--text);
         }
         .header {
@@ -33,237 +66,430 @@
             align-items: center;
             justify-content: space-between;
             flex-wrap: wrap;
-            gap: 1rem;
-            border-bottom: 2px solid rgba(255,255,255,0.2);
+            gap: var(--gap);
+            border-bottom: 2px solid rgba(255, 255, 255, 0.2);
             padding-bottom: 0.8rem;
             margin-bottom: 1rem;
         }
         .title-group { display: flex; align-items: center; gap: 0.5rem; }
-        .title-group img { width: 2rem; height: 2rem; border-radius: 0.5rem; }
-        .scale-control { display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; color: #ccc; }
-        .scale-control input[type="range"] { width: 80px; }
+        .title-icon {
+            width: 2rem;
+            height: 2rem;
+            border-radius: 0.5rem;
+            background-image: var(--title-icon);
+            background-size: cover;
+            background-position: center;
+            display: inline-block;
+        }
+        .title-icon[src] { background-image: none; }
+        .title-group h1 { font-size: var(--title-size); margin: 0; }
+        .header-controls { display: flex; align-items: center; gap: 0.8rem; flex-wrap: wrap; }
 
-        /* 新增状态栏样式 */
         .status-bar {
             display: flex;
             flex-wrap: wrap;
             gap: 1.5rem;
             padding: 0.6rem 1rem;
-            background: rgba(255,255,255,0.05);
-            border-radius: 1rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: var(--input-radius);
             margin-bottom: 1.2rem;
-            font-size: 0.85rem;
+            font-size: var(--status-font-size);
             color: #b0c7dd;
             align-items: center;
         }
-        .status-item {
-            display: flex;
-            align-items: center;
-            gap: 0.4rem;
-            white-space: nowrap;
-        }
+        .status-item { display: flex; align-items: center; gap: 0.4rem; white-space: nowrap; }
         .status-value {
             font-weight: 700;
             color: #f0d78c;
-            background: rgba(0,0,0,0.4);
+            background: rgba(0, 0, 0, 0.4);
             padding: 0.15rem 0.6rem;
             border-radius: 0.8rem;
             min-width: 3.5rem;
             text-align: center;
         }
+        .status-icon { font-size: 1.1em; }
 
-        .tabs { display: flex; gap: 1rem; margin-bottom: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.2); }
+        .tabs { display: flex; gap: var(--gap); margin-bottom: 1.5rem; border-bottom: 1px solid rgba(255, 255, 255, 0.2); }
         .tab {
-            padding: 0.6rem 1.8rem;
+            padding: var(--tab-padding);
             cursor: pointer;
-            border-radius: 1rem 1rem 0 0;
+            border-radius: var(--btn-radius) var(--btn-radius) 0 0;
             font-weight: 600;
+            font-size: var(--tab-font-size);
             color: #aaa;
             border: 1px solid transparent;
             border-bottom: none;
+            transition: 0.2s;
         }
-        .tab.active { background: rgba(255,255,255,0.1); color: white; border-color: rgba(255,255,255,0.3); }
+        .tab.active { background: rgba(255, 255, 255, 0.1); color: white; border-color: rgba(255, 255, 255, 0.3); }
+        .tab-icon { margin-right: 0.3rem; }
         .panel { display: none; }
         .panel.active { display: block; }
-        .search-row { display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-end; margin-bottom: 1.2rem; }
+        .search-row { display: flex; flex-wrap: wrap; gap: var(--gap); align-items: flex-end; margin-bottom: 1.2rem; }
         .input-group { display: flex; flex-direction: column; gap: 0.3rem; flex: 1 1 150px; }
-        .input-group label { font-size: 0.8rem; color: #a0b9d4; text-transform: uppercase; }
+        .input-group label { font-size: var(--label-font-size); color: #a0b9d4; text-transform: uppercase; }
         input, select {
-            background: rgba(10,18,28,0.8);
-            border: 1px solid rgba(255,255,255,0.25);
-            border-radius: 1rem;
-            padding: 0.75rem 1rem;
-            font-size: 1rem;
+            background: rgba(10, 18, 28, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            border-radius: var(--input-radius);
+            padding: 0.5rem 1rem;
+            height: var(--input-height);
+            font-size: var(--input-font-size);
             color: white;
             outline: none;
         }
+        select { cursor: pointer; }
         .btn {
             background: var(--accent);
             border: none;
-            border-radius: 1rem;
-            padding: 0.75rem 2rem;
+            border-radius: var(--btn-radius);
+            padding: 0 2rem;
+            height: var(--btn-height);
+            font-size: var(--btn-font-size);
             color: white;
             font-weight: 600;
             cursor: pointer;
             white-space: nowrap;
+            transition: 0.2s;
         }
+        .btn:hover { filter: brightness(1.1); }
+        .btn-sm { padding: 0 1rem; height: calc(var(--btn-height) * 0.85); font-size: calc(var(--btn-font-size) * 0.85); }
+        .btn-icon { margin-right: 0.3rem; }
         .result-area {
-            background: rgba(15,25,35,0.7);
-            border-radius: 1.5rem;
+            background: rgba(15, 25, 35, 0.7);
+            border-radius: var(--input-radius);
             padding: 1.2rem;
             min-height: 120px;
             max-height: 400px;
             overflow-y: auto;
+            font-size: var(--result-font-size);
         }
         .result-item {
-            background: rgba(255,255,255,0.05);
+            background: rgba(255, 255, 255, 0.05);
             margin-bottom: 0.5rem;
             padding: 0.6rem 1rem;
-            border-radius: 1rem;
-            border-left: 4px solid #4a8bc2;
+            border-radius: var(--input-radius);
+            border-left: 4px solid var(--accent);
             display: flex;
             flex-wrap: wrap;
             gap: 0.5rem 1rem;
             align-items: baseline;
         }
-        .code-badge { background: #3f5b70; padding: 0.2rem 0.7rem; border-radius: 1rem; font-size: 0.85rem; font-weight: bold; }
-        .func-en { font-weight: 700; color: #d9e6f2; flex: 1; }
+        .code-badge { background: #3f5b70; padding: 0.2rem 0.7rem; border-radius: 1rem; font-size: 0.85em; font-weight: bold; }
+        .func-en { font-weight: 700; color: var(--text); flex: 1; }
         .func-zh { background: #2e4559; padding: 0.2rem 0.8rem; border-radius: 1rem; color: #f2e9c2; }
         .no-res { color: #aaa; padding: 1rem; }
+
+        /* UI 调节面板 */
+        .ui-panel {
+            background: rgba(15, 25, 35, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: var(--card-radius);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            display: none;
+        }
+        .ui-panel.active { display: block; }
+        .ui-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 1rem;
+        }
+        .ui-item { display: flex; flex-direction: column; gap: 0.3rem; }
+        .ui-item label { font-size: 0.75rem; color: #a0b9d4; }
+        .ui-item input[type="color"] { width: 100%; height: 2rem; border: none; border-radius: 0.5rem; cursor: pointer; background: transparent; }
+        .ui-item input[type="range"] { width: 100%; }
+        .ui-item input[type="number"],
+        .ui-item input[type="text"],
+        .ui-item input[type="file"] { 
+            width: 100%; 
+            background: rgba(10,18,28,0.8); 
+            color: white; 
+            border: 1px solid rgba(255,255,255,0.25); 
+            border-radius: 0.5rem; 
+            padding: 0.4rem; 
+            font-size: 0.85rem;
+        }
+        .ui-item input[type="file"] { padding: 0.3rem; }
+        .ui-section-title { margin: 1rem 0 0.5rem; color: #ccc; font-size: 0.95rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.3rem; }
+        .ui-preview-icon { display: inline-block; width: 1.5rem; height: 1.5rem; vertical-align: middle; margin-right: 0.3rem; border-radius: 0.3rem; }
     </style>
-    <!-- 加载外部数据文件 data.js -->
     <script src="data.js"></script>
 </head>
 <body>
 <div class="app">
+    <!-- 标题栏 -->
     <div class="header">
         <div class="title-group">
-            <img src="icon.png" id="titleIcon" alt="图标" onerror="this.style.display='none'">
+            <img src="icon.png" id="titleIconImg" class="title-icon" alt="图标" onerror="this.style.display='none'">
             <h1>Mach3 OEM 代码查询 / 模糊搜索</h1>
         </div>
-        <div class="scale-control">
-            <span>🔍 缩放</span>
-            <input type="range" id="scaleRange" min="0.8" max="2.0" step="0.05" value="1.0">
-            <span id="scaleValue">100%</span>
+        <div class="header-controls">
+            <button class="btn btn-sm" id="toggleUI">🎨 UI 调节</button>
+            <button class="btn btn-sm" id="resetUI">🔄 重置</button>
         </div>
     </div>
 
-    <!-- ⭐ 新增状态栏 -->
+    <!-- UI 调节面板 -->
+    <div class="ui-panel" id="uiPanel">
+        <h3 style="margin-bottom: 1rem;">🎨 界面调节面板</h3>
+        
+        <!-- 图标自定义 -->
+        <div class="ui-section-title">🖼️ 图标自定义（支持 Emoji、文字、URL）</div>
+        <div class="ui-grid">
+            <div class="ui-item">
+                <label>标题图标文件</label>
+                <input type="file" id="titleIconFile" accept="image/*">
+            </div>
+            <div class="ui-item">
+                <label>标题图标 URL</label>
+                <input type="text" id="titleIconUrl" placeholder="留空使用默认 icon.png">
+            </div>
+            <div class="ui-item">
+                <label>精确查询选项卡图标</label>
+                <input type="text" id="tabIconExact" value="🔢" maxlength="5" placeholder="如 🔢">
+            </div>
+            <div class="ui-item">
+                <label>模糊搜索选项卡图标</label>
+                <input type="text" id="tabIconFuzzy" value="🔍" maxlength="5" placeholder="如 🔍">
+            </div>
+            <div class="ui-item">
+                <label>状态栏-数据图标</label>
+                <input type="text" id="statusIconData" value="📦" maxlength="5" placeholder="如 📦">
+            </div>
+            <div class="ui-item">
+                <label>状态栏-类别图标</label>
+                <input type="text" id="statusIconCat" value="📊" maxlength="5" placeholder="如 📊">
+            </div>
+            <div class="ui-item">
+                <label>查询按钮图标</label>
+                <input type="text" id="btnIconQuery" value="" maxlength="5" placeholder="如 🔎">
+            </div>
+            <div class="ui-item">
+                <label>搜索按钮图标</label>
+                <input type="text" id="btnIconSearch" value="" maxlength="5" placeholder="如 🔎">
+            </div>
+        </div>
+
+        <!-- 颜色调节 -->
+        <div class="ui-section-title">🎨 颜色</div>
+        <div class="ui-grid">
+            <div class="ui-item"><label>背景色</label><input type="color" id="colorBg" value="#1e2b3c"></div>
+            <div class="ui-item"><label>背景色2</label><input type="color" id="colorBg2" value="#0f1a26"></div>
+            <div class="ui-item"><label>卡片色</label><input type="color" id="colorCard" value="#ffffff"><input type="range" id="cardOpacity" min="0" max="100" value="8"></div>
+            <div class="ui-item"><label>强调色</label><input type="color" id="colorAccent" value="#3a6ea5"></div>
+            <div class="ui-item"><label>文字色</label><input type="color" id="colorText" value="#e0e8f0"></div>
+        </div>
+
+        <!-- 尺寸调节 -->
+        <div class="ui-section-title">📐 尺寸</div>
+        <div class="ui-grid">
+            <div class="ui-item"><label>界面宽度 (px)</label><input type="number" id="uiWidthInput" value="960"></div>
+            <div class="ui-item"><label>界面高度 (px, 空=auto)</label><input type="number" id="uiHeightInput" value="" placeholder="auto"></div>
+            <div class="ui-item"><label>标题字号 (rem)</label><input type="number" id="titleSize" value="1.6" step="0.1"></div>
+            <div class="ui-item"><label>按钮高度 (rem)</label><input type="number" id="btnHeight" value="2.8" step="0.1"></div>
+            <div class="ui-item"><label>按钮字号 (rem)</label><input type="number" id="btnFontSize" value="1" step="0.1"></div>
+            <div class="ui-item"><label>输入框高度 (rem)</label><input type="number" id="inputHeight" value="3" step="0.1"></div>
+            <div class="ui-item"><label>输入框字号 (rem)</label><input type="number" id="inputFontSize" value="1" step="0.1"></div>
+            <div class="ui-item"><label>标签字号 (rem)</label><input type="number" id="labelFontSize" value="0.8" step="0.1"></div>
+            <div class="ui-item"><label>状态栏字号 (rem)</label><input type="number" id="statusFontSize" value="0.85" step="0.05"></div>
+            <div class="ui-item"><label>结果区字号 (rem)</label><input type="number" id="resultFontSize" value="1" step="0.1"></div>
+            <div class="ui-item"><label>选项卡字号 (rem)</label><input type="number" id="tabFontSize" value="1" step="0.1"></div>
+            <div class="ui-item"><label>选项卡水平内边距 (rem)</label><input type="number" id="tabPaddingH" value="1.8" step="0.1"></div>
+        </div>
+
+        <!-- 圆角/间距调节 -->
+        <div class="ui-section-title">🔲 圆角 & 间距</div>
+        <div class="ui-grid">
+            <div class="ui-item"><label>卡片圆角 (rem)</label><input type="number" id="cardRadius" value="2" step="0.1"></div>
+            <div class="ui-item"><label>按钮圆角 (rem)</label><input type="number" id="btnRadius" value="1" step="0.1"></div>
+            <div class="ui-item"><label>输入框圆角 (rem)</label><input type="number" id="inputRadius" value="1" step="0.1"></div>
+            <div class="ui-item"><label>卡片内边距 (rem)</label><input type="number" id="cardPadding" value="2" step="0.1"></div>
+            <div class="ui-item"><label>组件间距 (rem)</label><input type="number" id="uiGap" value="1" step="0.1"></div>
+        </div>
+    </div>
+
+    <!-- 状态栏 -->
     <div class="status-bar">
         <div class="status-item">
-            📦 数据加载：<span class="status-value" id="totalCount">---</span>
+            <span class="status-icon" id="statusIconDataEl">📦</span> 数据加载：<span class="status-value" id="totalCount">---</span>
         </div>
         <div class="status-item">
-            📊 当前类别：<span class="status-value" id="categoryCount">---</span> 条
+            <span class="status-icon" id="statusIconCatEl">📊</span> 当前类别：<span class="status-value" id="categoryCount">---</span> 条
         </div>
     </div>
 
+    <!-- 选项卡 -->
     <div class="tabs">
-        <div class="tab active" data-panel="exact">🔢 精确查询</div>
-        <div class="tab" data-panel="fuzzy">🔍 模糊搜索</div>
+        <div class="tab active" data-panel="exact">
+            <span class="tab-icon" id="tabIconExactEl">🔢</span> 精确查询
+        </div>
+        <div class="tab" data-panel="fuzzy">
+            <span class="tab-icon" id="tabIconFuzzyEl">🔍</span> 模糊搜索
+        </div>
     </div>
 
+    <!-- 精确查询面板 -->
     <div id="exact" class="panel active">
         <div class="search-row">
             <div class="input-group"><label>输入代码</label><input type="number" id="exactCode" placeholder="例: 100"></div>
             <div class="input-group"><label>选择类别</label><select id="exactCat"></select></div>
-            <button class="btn" id="exactBtn">查询</button>
+            <button class="btn" id="exactBtn"><span class="btn-icon" id="btnIconQueryEl"></span>查询</button>
         </div>
         <div class="result-area" id="exactResult"><div class="no-res">👆 输入代码并选择类别</div></div>
     </div>
 
+    <!-- 模糊搜索面板 -->
     <div id="fuzzy" class="panel">
         <div class="search-row">
             <div class="input-group"><label>输入关键词（中/英文）</label><input type="text" id="fuzzyText" placeholder="例: 主轴 或 Feed"></div>
-            <button class="btn" id="fuzzyBtn">搜索</button>
+            <button class="btn" id="fuzzyBtn"><span class="btn-icon" id="btnIconSearchEl"></span>搜索</button>
         </div>
         <div class="result-area" id="fuzzyResult"><div class="no-res">💡 输入任意中文或英文关键词</div></div>
     </div>
 </div>
 
 <script>
-// ==================== 数据加载与状态管理 ====================
-const FALLBACK_DATA = [
-    {"code":0,"attr":"Demo","en":"Example","zh":"示例数据 - 请确保 data.js 与 index.html 在同一文件夹"}
-];
+// ==================== 数据加载 ====================
+const FALLBACK_DATA = [{ "code": 0, "attr": "Demo", "en": "Example", "zh": "示例数据" }];
+if (typeof DATA === 'undefined') { window.DATA = FALLBACK_DATA; document.getElementById('totalCount').textContent = '加载失败'; }
+else { document.getElementById('totalCount').textContent = DATA.length + ' 条'; }
 
-if (typeof DATA === 'undefined') {
-    window.DATA = FALLBACK_DATA;
-    document.getElementById('totalCount').textContent = '加载失败';
-} else {
-    document.getElementById('totalCount').textContent = DATA.length + ' 条';
-}
-
-// 索引构建
 const idx = {};
-DATA.forEach(d => {
-    const key = d.attr + '|' + d.code;
-    if (!idx[key]) idx[key] = [];
-    idx[key].push(d);
-});
-
-// 下拉框填充 + 绑定类别切换事件
+DATA.forEach(d => { const key = d.attr + '|' + d.code; if (!idx[key]) idx[key] = []; idx[key].push(d); });
 const attrs = [...new Set(DATA.map(d => d.attr))];
 const sel = document.getElementById('exactCat');
-attrs.forEach(attr => {
-    const opt = document.createElement('option');
-    opt.value = attr;
-    opt.textContent = attr;
-    sel.appendChild(opt);
-});
+attrs.forEach(attr => { const opt = document.createElement('option'); opt.value = attr; opt.textContent = attr; sel.appendChild(opt); });
+function updateCategoryCount() { document.getElementById('categoryCount').textContent = DATA.filter(d => d.attr === sel.value).length; }
+sel.addEventListener('change', updateCategoryCount); updateCategoryCount();
 
-// 🔄 更新当前类别条目数
-function updateCategoryCount() {
-    const selectedAttr = sel.value;
-    const count = DATA.filter(d => d.attr === selectedAttr).length;
-    document.getElementById('categoryCount').textContent = count;
-}
-sel.addEventListener('change', updateCategoryCount);
-// 初始显示
-updateCategoryCount();
-
-// ==================== 查询功能 ====================
 document.getElementById('exactBtn').onclick = () => {
     const code = parseInt(document.getElementById('exactCode').value.trim());
-    const attr = sel.value;
-    const resultDiv = document.getElementById('exactResult');
-    if (isNaN(code)) { resultDiv.innerHTML = '<div class="no-res">请输入数字代码</div>'; return; }
+    const attr = sel.value; const box = document.getElementById('exactResult');
+    if (isNaN(code)) { box.innerHTML = '<div class="no-res">请输入数字代码</div>'; return; }
     const items = idx[attr + '|' + code] || [];
-    resultDiv.innerHTML = items.length
-        ? items.map(d => `<div class="result-item"><span class="code-badge">${d.code}</span><span class="func-en">${d.en}</span><span class="func-zh">${d.zh}</span></div>`).join('')
-        : '<div class="no-res">未找到</div>';
+    box.innerHTML = items.length ? items.map(d => `<div class="result-item"><span class="code-badge">${d.code}</span><span class="func-en">${d.en}</span><span class="func-zh">${d.zh}</span></div>`).join('') : '<div class="no-res">未找到</div>';
 };
-
 document.getElementById('fuzzyBtn').onclick = () => {
     const q = document.getElementById('fuzzyText').value.trim().toLowerCase();
-    const resultDiv = document.getElementById('fuzzyResult');
-    if (!q) { resultDiv.innerHTML = '<div class="no-res">请输入关键词</div>'; return; }
-    const filtered = DATA.filter(d =>
-        d.en.toLowerCase().includes(q) ||
-        d.zh.includes(q) ||
-        String(d.code).includes(q)
-    );
-    resultDiv.innerHTML = filtered.length
-        ? filtered.map(d => `<div class="result-item"><span class="code-badge">${d.code}</span><span class="func-en">${d.en}</span><span class="func-zh">${d.zh}</span></div>`).join('')
-        : '<div class="no-res">未找到匹配项</div>';
+    const box = document.getElementById('fuzzyResult');
+    if (!q) { box.innerHTML = '<div class="no-res">请输入关键词</div>'; return; }
+    const filtered = DATA.filter(d => d.en.toLowerCase().includes(q) || d.zh.includes(q) || String(d.code).includes(q));
+    box.innerHTML = filtered.length ? filtered.map(d => `<div class="result-item"><span class="code-badge">${d.code}</span><span class="func-en">${d.en}</span><span class="func-zh">${d.zh}</span></div>`).join('') : '<div class="no-res">未找到匹配项</div>';
 };
+document.querySelectorAll('.tab').forEach(tab => { tab.addEventListener('click', () => { document.querySelectorAll('.tab').forEach(t => t.classList.remove('active')); document.querySelectorAll('.panel').forEach(p => p.classList.remove('active')); tab.classList.add('active'); document.getElementById(tab.dataset.panel).classList.add('active'); }); });
 
-// ==================== 界面交互 ====================
-document.querySelectorAll('.tab').forEach(tab => {
-    tab.addEventListener('click', () => {
-        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-        document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-        tab.classList.add('active');
-        document.getElementById(tab.dataset.panel).classList.add('active');
+// ==================== UI 调节 ====================
+const UI_DEFAULTS = {
+    '--bg':'#1e2b3c','--bg2':'#0f1a26','--accent':'#3a6ea5','--text':'#e0e8f0',
+    '--card-radius':'2rem','--btn-radius':'1rem','--input-radius':'1rem',
+    '--card-padding':'2rem','--gap':'1rem','--title-size':'1.6rem',
+    '--btn-height':'2.8rem','--btn-font-size':'1rem','--input-height':'3rem',
+    '--input-font-size':'1rem','--label-font-size':'0.8rem','--status-font-size':'0.85rem',
+    '--result-font-size':'1rem','--tab-font-size':'1rem','--tab-padding':'0.6rem 1.8rem',
+    '--ui-width':'960px','--ui-height':'auto',
+    // 图标默认值
+    'icon-title':'icon.png', 'icon-tab-exact':'🔢', 'icon-tab-fuzzy':'🔍',
+    'icon-status-data':'📦', 'icon-status-cat':'📊', 'icon-btn-query':'', 'icon-btn-search':''
+};
+let uiSettings = JSON.parse(localStorage.getItem('mach3-ui-full') || '{}');
+
+function hexToRgb(hex) { const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16); return `${r},${g},${b}`; }
+function applyUI() {
+    const root = document.documentElement.style;
+    for (let [k, v] of Object.entries(UI_DEFAULTS)) {
+        if (k.startsWith('icon-')) continue;
+        root.setProperty(k, uiSettings[k] !== undefined ? uiSettings[k] : v);
+    }
+    const cardColor = uiSettings['--card-color'] || '#ffffff';
+    const cardOpacity = uiSettings['--card-opacity'] !== undefined ? uiSettings['--card-opacity'] : 8;
+    root.setProperty('--card', `rgba(${hexToRgb(cardColor)}, ${cardOpacity / 100})`);
+    root.setProperty('--tab-padding', `0.6rem ${uiSettings['--tab-padding-h'] || '1.8rem'}`);
+    
+    // 应用图标
+    const titleIcon = uiSettings['icon-title'] || UI_DEFAULTS['icon-title'];
+    document.getElementById('titleIconImg').src = titleIcon;
+    document.getElementById('tabIconExactEl').textContent = uiSettings['icon-tab-exact'] || UI_DEFAULTS['icon-tab-exact'];
+    document.getElementById('tabIconFuzzyEl').textContent = uiSettings['icon-tab-fuzzy'] || UI_DEFAULTS['icon-tab-fuzzy'];
+    document.getElementById('statusIconDataEl').textContent = uiSettings['icon-status-data'] || UI_DEFAULTS['icon-status-data'];
+    document.getElementById('statusIconCatEl').textContent = uiSettings['icon-status-cat'] || UI_DEFAULTS['icon-status-cat'];
+    document.getElementById('btnIconQueryEl').textContent = uiSettings['icon-btn-query'] || UI_DEFAULTS['icon-btn-query'];
+    document.getElementById('btnIconSearchEl').textContent = uiSettings['icon-btn-search'] || UI_DEFAULTS['icon-btn-search'];
+}
+function saveAndApply() { localStorage.setItem('mach3-ui-full', JSON.stringify(uiSettings)); applyUI(); }
+
+document.getElementById('toggleUI').onclick = () => document.getElementById('uiPanel').classList.toggle('active');
+
+// 颜色绑定
+[['colorBg','--bg'],['colorBg2','--bg2'],['colorAccent','--accent'],['colorText','--text']].forEach(([id,prop]) => {
+    const el = document.getElementById(id); el.value = uiSettings[prop] || UI_DEFAULTS[prop];
+    el.addEventListener('input', () => { uiSettings[prop] = el.value; saveAndApply(); });
+});
+const colorCard = document.getElementById('colorCard'), cardOpacity = document.getElementById('cardOpacity');
+colorCard.value = uiSettings['--card-color'] || '#ffffff';
+cardOpacity.value = uiSettings['--card-opacity'] !== undefined ? uiSettings['--card-opacity'] : 8;
+colorCard.addEventListener('input', () => { uiSettings['--card-color'] = colorCard.value; saveAndApply(); });
+cardOpacity.addEventListener('input', () => { uiSettings['--card-opacity'] = parseInt(cardOpacity.value); saveAndApply(); });
+
+// 尺寸/圆角/间距绑定
+const numInputs = [
+    ['uiWidthInput','--ui-width','px'],['uiHeightInput','--ui-height','px'],
+    ['titleSize','--title-size','rem'],['btnHeight','--btn-height','rem'],['btnFontSize','--btn-font-size','rem'],
+    ['inputHeight','--input-height','rem'],['inputFontSize','--input-font-size','rem'],
+    ['labelFontSize','--label-font-size','rem'],['statusFontSize','--status-font-size','rem'],
+    ['resultFontSize','--result-font-size','rem'],['tabFontSize','--tab-font-size','rem'],
+    ['cardRadius','--card-radius','rem'],['btnRadius','--btn-radius','rem'],['inputRadius','--input-radius','rem'],
+    ['cardPadding','--card-padding','rem'],['uiGap','--gap','rem'],['tabPaddingH','--tab-padding-h','rem']
+];
+numInputs.forEach(([id, prop, unit]) => {
+    const el = document.getElementById(id); if (!el) return;
+    if (prop === '--ui-height') { el.value = uiSettings[prop] ? parseFloat(uiSettings[prop]) : ''; }
+    else { el.value = parseFloat(uiSettings[prop] || UI_DEFAULTS[prop]); }
+    el.addEventListener('input', () => {
+        if (prop === '--ui-height') { uiSettings[prop] = el.value ? el.value + unit : 'auto'; }
+        else { uiSettings[prop] = el.value + unit; }
+        saveAndApply();
     });
 });
 
-const scaleRange = document.getElementById('scaleRange');
-const scaleValue = document.getElementById('scaleValue');
-scaleRange.addEventListener('input', () => {
-    document.documentElement.style.setProperty('--scale', scaleRange.value);
-    scaleValue.textContent = Math.round(scaleRange.value * 100) + '%';
+// 图标文本绑定
+[['tabIconExact','icon-tab-exact'],['tabIconFuzzy','icon-tab-fuzzy'],
+ ['statusIconData','icon-status-data'],['statusIconCat','icon-status-cat'],
+ ['btnIconQuery','icon-btn-query'],['btnIconSearch','icon-btn-search']].forEach(([id, key]) => {
+    const el = document.getElementById(id);
+    el.value = uiSettings[key] || UI_DEFAULTS[key];
+    el.addEventListener('input', () => { uiSettings[key] = el.value; saveAndApply(); });
 });
+
+// 标题图标文件上传
+document.getElementById('titleIconFile').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(ev) {
+        uiSettings['icon-title'] = ev.target.result;
+        document.getElementById('titleIconUrl').value = '';
+        saveAndApply();
+    };
+    reader.readAsDataURL(file);
+});
+
+// 标题图标 URL
+document.getElementById('titleIconUrl').addEventListener('input', function() {
+    const url = this.value.trim();
+    if (url) {
+        uiSettings['icon-title'] = url;
+        document.getElementById('titleIconFile').value = '';
+        saveAndApply();
+    } else {
+        uiSettings['icon-title'] = UI_DEFAULTS['icon-title'];
+        saveAndApply();
+    }
+});
+
+// 重置
+document.getElementById('resetUI').onclick = () => { uiSettings = {}; localStorage.removeItem('mach3-ui-full'); applyUI(); location.reload(); };
+applyUI();
 </script>
 </body>
 </html>
