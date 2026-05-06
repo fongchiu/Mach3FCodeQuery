@@ -3,36 +3,133 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mach3 OEM 代码查询工具</title>
+    <title>Mach3 OEM 代码查询工具 · 状态栏版</title>
     <link rel="manifest" href="manifest.json">
     <style>
         :root { --scale: 1; --bg: #1e2b3c; --card: rgba(255,255,255,0.08); --text: #e0e8f0; --accent: #3a6ea5; }
         html { font-size: calc(16px * var(--scale)); }
         * { margin:0; padding:0; box-sizing:border-box; }
-        body { font-family: 'Segoe UI', Roboto, sans-serif; background: linear-gradient(135deg, #1e2b3c, #0f1a26); min-height:100vh; display:flex; align-items:center; justify-content:center; padding:1rem; }
-        .app { background: var(--card); backdrop-filter:blur(20px); border:1px solid rgba(255,255,255,0.15); border-radius:2rem; padding:2rem; max-width:960px; width:100%; color:var(--text); }
-        .header { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:1rem; border-bottom:2px solid rgba(255,255,255,0.2); padding-bottom:0.8rem; margin-bottom:1.2rem; }
-        .title-group { display:flex; align-items:center; gap:0.5rem; }
-        .title-group img { width:2rem; height:2rem; border-radius:0.5rem; }
-        .scale-control { display:flex; align-items:center; gap:0.5rem; font-size:0.85rem; color:#ccc; }
-        .scale-control input[type="range"] { width:80px; }
-        .tabs { display:flex; gap:1rem; margin-bottom:1.5rem; border-bottom:1px solid rgba(255,255,255,0.2); }
-        .tab { padding:0.6rem 1.8rem; cursor:pointer; border-radius:1rem 1rem 0 0; font-weight:600; color:#aaa; border:1px solid transparent; border-bottom:none; }
-        .tab.active { background:rgba(255,255,255,0.1); color:white; border-color:rgba(255,255,255,0.3); }
-        .panel { display:none; }
-        .panel.active { display:block; }
-        .search-row { display:flex; flex-wrap:wrap; gap:1rem; align-items:flex-end; margin-bottom:1.2rem; }
-        .input-group { display:flex; flex-direction:column; gap:0.3rem; flex:1 1 150px; }
-        .input-group label { font-size:0.8rem; color:#a0b9d4; text-transform:uppercase; }
-        input, select { background:rgba(10,18,28,0.8); border:1px solid rgba(255,255,255,0.25); border-radius:1rem; padding:0.75rem 1rem; font-size:1rem; color:white; outline:none; }
-        .btn { background:var(--accent); border:none; border-radius:1rem; padding:0.75rem 2rem; color:white; font-weight:600; cursor:pointer; white-space:nowrap; }
-        .result-area { background:rgba(15,25,35,0.7); border-radius:1.5rem; padding:1.2rem; min-height:120px; max-height:400px; overflow-y:auto; }
-        .result-item { background:rgba(255,255,255,0.05); margin-bottom:0.5rem; padding:0.6rem 1rem; border-radius:1rem; border-left:4px solid #4a8bc2; display:flex; flex-wrap:wrap; gap:0.5rem 1rem; align-items:baseline; }
-        .code-badge { background:#3f5b70; padding:0.2rem 0.7rem; border-radius:1rem; font-size:0.85rem; font-weight:bold; }
-        .func-en { font-weight:700; color:#d9e6f2; flex:1; }
-        .func-zh { background:#2e4559; padding:0.2rem 0.8rem; border-radius:1rem; color:#f2e9c2; }
-        .no-res { color:#aaa; padding:1rem; }
-        .status-bar { font-size:0.8rem; color:#888; margin-bottom:0.8rem; }
+        body {
+            font-family: 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1e2b3c, #0f1a26);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+        .app {
+            background: var(--card);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 2rem;
+            padding: 2rem;
+            max-width: 960px;
+            width: 100%;
+            color: var(--text);
+        }
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 1rem;
+            border-bottom: 2px solid rgba(255,255,255,0.2);
+            padding-bottom: 0.8rem;
+            margin-bottom: 1rem;
+        }
+        .title-group { display: flex; align-items: center; gap: 0.5rem; }
+        .title-group img { width: 2rem; height: 2rem; border-radius: 0.5rem; }
+        .scale-control { display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; color: #ccc; }
+        .scale-control input[type="range"] { width: 80px; }
+
+        /* 新增状态栏样式 */
+        .status-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+            padding: 0.6rem 1rem;
+            background: rgba(255,255,255,0.05);
+            border-radius: 1rem;
+            margin-bottom: 1.2rem;
+            font-size: 0.85rem;
+            color: #b0c7dd;
+            align-items: center;
+        }
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            white-space: nowrap;
+        }
+        .status-value {
+            font-weight: 700;
+            color: #f0d78c;
+            background: rgba(0,0,0,0.4);
+            padding: 0.15rem 0.6rem;
+            border-radius: 0.8rem;
+            min-width: 3.5rem;
+            text-align: center;
+        }
+
+        .tabs { display: flex; gap: 1rem; margin-bottom: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.2); }
+        .tab {
+            padding: 0.6rem 1.8rem;
+            cursor: pointer;
+            border-radius: 1rem 1rem 0 0;
+            font-weight: 600;
+            color: #aaa;
+            border: 1px solid transparent;
+            border-bottom: none;
+        }
+        .tab.active { background: rgba(255,255,255,0.1); color: white; border-color: rgba(255,255,255,0.3); }
+        .panel { display: none; }
+        .panel.active { display: block; }
+        .search-row { display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-end; margin-bottom: 1.2rem; }
+        .input-group { display: flex; flex-direction: column; gap: 0.3rem; flex: 1 1 150px; }
+        .input-group label { font-size: 0.8rem; color: #a0b9d4; text-transform: uppercase; }
+        input, select {
+            background: rgba(10,18,28,0.8);
+            border: 1px solid rgba(255,255,255,0.25);
+            border-radius: 1rem;
+            padding: 0.75rem 1rem;
+            font-size: 1rem;
+            color: white;
+            outline: none;
+        }
+        .btn {
+            background: var(--accent);
+            border: none;
+            border-radius: 1rem;
+            padding: 0.75rem 2rem;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .result-area {
+            background: rgba(15,25,35,0.7);
+            border-radius: 1.5rem;
+            padding: 1.2rem;
+            min-height: 120px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .result-item {
+            background: rgba(255,255,255,0.05);
+            margin-bottom: 0.5rem;
+            padding: 0.6rem 1rem;
+            border-radius: 1rem;
+            border-left: 4px solid #4a8bc2;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem 1rem;
+            align-items: baseline;
+        }
+        .code-badge { background: #3f5b70; padding: 0.2rem 0.7rem; border-radius: 1rem; font-size: 0.85rem; font-weight: bold; }
+        .func-en { font-weight: 700; color: #d9e6f2; flex: 1; }
+        .func-zh { background: #2e4559; padding: 0.2rem 0.8rem; border-radius: 1rem; color: #f2e9c2; }
+        .no-res { color: #aaa; padding: 1rem; }
     </style>
     <!-- 加载外部数据文件 data.js -->
     <script src="data.js"></script>
@@ -50,7 +147,17 @@
             <span id="scaleValue">100%</span>
         </div>
     </div>
-    <div class="status-bar" id="dataStatus">正在加载数据…</div>
+
+    <!-- ⭐ 新增状态栏 -->
+    <div class="status-bar">
+        <div class="status-item">
+            📦 数据加载：<span class="status-value" id="totalCount">---</span>
+        </div>
+        <div class="status-item">
+            📊 当前类别：<span class="status-value" id="categoryCount">---</span> 条
+        </div>
+    </div>
+
     <div class="tabs">
         <div class="tab active" data-panel="exact">🔢 精确查询</div>
         <div class="tab" data-panel="fuzzy">🔍 模糊搜索</div>
@@ -75,18 +182,16 @@
 </div>
 
 <script>
-// ==================== 数据加载逻辑 ====================
-// 尝试使用外部 data.js 定义的 DATA，如果加载失败则使用内置后备数据
+// ==================== 数据加载与状态管理 ====================
 const FALLBACK_DATA = [
     {"code":0,"attr":"Demo","en":"Example","zh":"示例数据 - 请确保 data.js 与 index.html 在同一文件夹"}
 ];
 
-// 如果外部 DATA 未定义，自动使用后备数据
 if (typeof DATA === 'undefined') {
     window.DATA = FALLBACK_DATA;
-    document.getElementById('dataStatus').innerHTML = '⚠️ 数据文件 data.js 未找到，使用内置参考数据';
+    document.getElementById('totalCount').textContent = '加载失败';
 } else {
-    document.getElementById('dataStatus').innerHTML = '✅ 已加载外部数据文件 data.js';
+    document.getElementById('totalCount').textContent = DATA.length + ' 条';
 }
 
 // 索引构建
@@ -97,7 +202,7 @@ DATA.forEach(d => {
     idx[key].push(d);
 });
 
-// 下拉框填充
+// 下拉框填充 + 绑定类别切换事件
 const attrs = [...new Set(DATA.map(d => d.attr))];
 const sel = document.getElementById('exactCat');
 attrs.forEach(attr => {
@@ -107,10 +212,20 @@ attrs.forEach(attr => {
     sel.appendChild(opt);
 });
 
-// 精确查询
+// 🔄 更新当前类别条目数
+function updateCategoryCount() {
+    const selectedAttr = sel.value;
+    const count = DATA.filter(d => d.attr === selectedAttr).length;
+    document.getElementById('categoryCount').textContent = count;
+}
+sel.addEventListener('change', updateCategoryCount);
+// 初始显示
+updateCategoryCount();
+
+// ==================== 查询功能 ====================
 document.getElementById('exactBtn').onclick = () => {
     const code = parseInt(document.getElementById('exactCode').value.trim());
-    const attr = document.getElementById('exactCat').value;
+    const attr = sel.value;
     const resultDiv = document.getElementById('exactResult');
     if (isNaN(code)) { resultDiv.innerHTML = '<div class="no-res">请输入数字代码</div>'; return; }
     const items = idx[attr + '|' + code] || [];
@@ -119,7 +234,6 @@ document.getElementById('exactBtn').onclick = () => {
         : '<div class="no-res">未找到</div>';
 };
 
-// 模糊搜索
 document.getElementById('fuzzyBtn').onclick = () => {
     const q = document.getElementById('fuzzyText').value.trim().toLowerCase();
     const resultDiv = document.getElementById('fuzzyResult');
@@ -134,7 +248,7 @@ document.getElementById('fuzzyBtn').onclick = () => {
         : '<div class="no-res">未找到匹配项</div>';
 };
 
-// 选项卡切换
+// ==================== 界面交互 ====================
 document.querySelectorAll('.tab').forEach(tab => {
     tab.addEventListener('click', () => {
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -144,7 +258,6 @@ document.querySelectorAll('.tab').forEach(tab => {
     });
 });
 
-// 界面缩放
 const scaleRange = document.getElementById('scaleRange');
 const scaleValue = document.getElementById('scaleValue');
 scaleRange.addEventListener('input', () => {
